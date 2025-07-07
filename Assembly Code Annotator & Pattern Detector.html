@@ -1,0 +1,543 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Assembly Code Annotator & Pattern Detector</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Monaco', 'Menlo', 'Ubuntu Mono', monospace;
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1a1a 100%);
+            color: #00ff00;
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+            background: rgba(0, 0, 0, 0.9);
+            border-radius: 15px;
+            padding: 30px;
+            box-shadow: 0 10px 30px rgba(0, 255, 0, 0.1);
+            border: 1px solid rgba(0, 255, 0, 0.3);
+        }
+
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+
+        .header h1 {
+            font-size: 2.5em;
+            color: #00ff00;
+            text-shadow: 0 0 10px rgba(0, 255, 0, 0.5);
+            margin-bottom: 10px;
+        }
+
+        .header p {
+            color: #888;
+            font-size: 1.1em;
+        }
+
+        .main-content {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
+        }
+
+        .input-section, .output-section {
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 10px;
+            padding: 20px;
+            border: 1px solid rgba(0, 255, 0, 0.2);
+        }
+
+        .section-title {
+            color: #00ff00;
+            font-size: 1.3em;
+            margin-bottom: 15px;
+            text-align: center;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        textarea {
+            width: 100%;
+            height: 400px;
+            background: #000;
+            color: #00ff00;
+            border: 1px solid rgba(0, 255, 0, 0.3);
+            border-radius: 5px;
+            padding: 15px;
+            font-family: inherit;
+            font-size: 14px;
+            resize: vertical;
+            line-height: 1.5;
+        }
+
+        textarea::placeholder {
+            color: #666;
+        }
+
+        .controls {
+            display: flex;
+            justify-content: center;
+            gap: 20px;
+            margin: 20px 0;
+            flex-wrap: wrap;
+        }
+
+        .btn {
+            background: linear-gradient(45deg, #00ff00, #00cc00);
+            color: #000;
+            border: none;
+            padding: 12px 25px;
+            border-radius: 25px;
+            font-weight: bold;
+            cursor: pointer;
+            font-size: 16px;
+            transition: all 0.3s ease;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(0, 255, 0, 0.3);
+        }
+
+        .btn:active {
+            transform: translateY(0);
+        }
+
+        .output {
+            background: #000;
+            color: #00ff00;
+            border: 1px solid rgba(0, 255, 0, 0.3);
+            border-radius: 5px;
+            padding: 15px;
+            height: 400px;
+            overflow-y: auto;
+            font-size: 14px;
+            line-height: 1.6;
+        }
+
+        .annotation {
+            margin-bottom: 15px;
+            padding: 10px;
+            background: rgba(0, 255, 0, 0.1);
+            border-left: 3px solid #00ff00;
+            border-radius: 5px;
+        }
+
+        .assembly-line {
+            color: #ffff00;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .explanation {
+            color: #00ff00;
+            margin-bottom: 5px;
+        }
+
+        .pattern-type {
+            color: #ff6600;
+            font-size: 12px;
+            text-transform: uppercase;
+            font-weight: bold;
+        }
+
+        .patterns-section {
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 10px;
+            padding: 20px;
+            border: 1px solid rgba(0, 255, 0, 0.2);
+            margin-top: 20px;
+        }
+
+        .pattern-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+        }
+
+        .pattern-card {
+            background: rgba(0, 0, 0, 0.8);
+            border: 1px solid rgba(0, 255, 0, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+        }
+
+        .pattern-name {
+            color: #00ff00;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .pattern-description {
+            color: #888;
+            font-size: 13px;
+        }
+
+        .stats {
+            display: flex;
+            justify-content: space-around;
+            margin-top: 20px;
+            padding: 15px;
+            background: rgba(0, 0, 0, 0.7);
+            border-radius: 10px;
+            border: 1px solid rgba(0, 255, 0, 0.2);
+        }
+
+        .stat {
+            text-align: center;
+        }
+
+        .stat-value {
+            color: #00ff00;
+            font-size: 2em;
+            font-weight: bold;
+        }
+
+        .stat-label {
+            color: #888;
+            font-size: 0.9em;
+        }
+
+        @media (max-width: 768px) {
+            .main-content {
+                grid-template-columns: 1fr;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: center;
+            }
+            
+            .header h1 {
+                font-size: 2em;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>Assembly Code Annotator & Pattern Detector</h1>
+            <p>Translate cryptic assembly into plain English explanations</p>
+        </div>
+
+        <div class="main-content">
+            <div class="input-section">
+                <h2 class="section-title">Assembly Code Input</h2>
+                <textarea id="assemblyInput" placeholder="Paste your assembly code here...
+
+Example:
+mov eax, dword ptr [ebp-0x4]
+cmp eax, 0x1337
+jne loc_40103C
+push eax
+call printf
+add esp, 0x4"></textarea>
+            </div>
+
+            <div class="output-section">
+                <h2 class="section-title">Annotated Explanation</h2>
+                <div id="output" class="output">
+                    <div style="text-align: center; color: #666; margin-top: 150px;">
+                        Paste assembly code and click "Analyze" to see explanations
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="controls">
+            <button class="btn" onclick="analyzeCode()">Analyze Code</button>
+            <button class="btn" onclick="clearAll()">Clear All</button>
+            <button class="btn" onclick="loadExample()">Load Example</button>
+        </div>
+
+        <div class="patterns-section">
+            <h2 class="section-title">Detected Patterns</h2>
+            <div id="patternsGrid" class="pattern-grid">
+                <div style="text-align: center; color: #666; grid-column: 1 / -1;">
+                    No patterns detected yet
+                </div>
+            </div>
+        </div>
+
+        <div class="stats">
+            <div class="stat">
+                <div class="stat-value" id="instructionCount">0</div>
+                <div class="stat-label">Instructions</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="patternCount">0</div>
+                <div class="stat-label">Patterns</div>
+            </div>
+            <div class="stat">
+                <div class="stat-value" id="complexityScore">0</div>
+                <div class="stat-label">Complexity</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        const instructionExplanations = {
+            'mov': 'Move/copy data from source to destination',
+            'cmp': 'Compare two values (sets flags)',
+            'jne': 'Jump if not equal (conditional jump)',
+            'je': 'Jump if equal (conditional jump)',
+            'jmp': 'Unconditional jump to address',
+            'push': 'Push value onto stack',
+            'pop': 'Pop value from stack',
+            'call': 'Call function/subroutine',
+            'ret': 'Return from function',
+            'add': 'Add values together',
+            'sub': 'Subtract values',
+            'mul': 'Multiply values',
+            'div': 'Divide values',
+            'xor': 'XOR operation (often used to zero registers)',
+            'and': 'Bitwise AND operation',
+            'or': 'Bitwise OR operation',
+            'not': 'Bitwise NOT operation',
+            'shl': 'Shift left (multiply by 2)',
+            'shr': 'Shift right (divide by 2)',
+            'lea': 'Load effective address',
+            'test': 'Test bits (like AND but only sets flags)',
+            'inc': 'Increment by 1',
+            'dec': 'Decrement by 1',
+            'nop': 'No operation (do nothing)',
+            'int': 'Software interrupt',
+            'jl': 'Jump if less than',
+            'jg': 'Jump if greater than',
+            'jle': 'Jump if less than or equal',
+            'jge': 'Jump if greater than or equal',
+            'jz': 'Jump if zero',
+            'jnz': 'Jump if not zero',
+            'loop': 'Loop instruction',
+            'rep': 'Repeat instruction prefix',
+            'movsb': 'Move string byte',
+            'movsw': 'Move string word',
+            'movsd': 'Move string dword',
+            'stosb': 'Store byte in string',
+            'lodsb': 'Load byte from string',
+            'cmpsb': 'Compare string bytes',
+            'scasb': 'Scan string for byte'
+        };
+
+        const patterns = [
+            {
+                name: 'Function Prologue',
+                regex: /push\s+ebp\s*\n\s*mov\s+ebp,\s*esp/i,
+                description: 'Standard function entry - setting up stack frame'
+            },
+            {
+                name: 'Function Epilogue',
+                regex: /mov\s+esp,\s*ebp\s*\n\s*pop\s+ebp\s*\n\s*ret/i,
+                description: 'Standard function exit - cleaning up stack frame'
+            },
+            {
+                name: 'Password Check',
+                regex: /(cmp|strcmp|strncmp).*\n.*j(ne|e)/i,
+                description: 'Likely password or input validation'
+            },
+            {
+                name: 'Loop Pattern',
+                regex: /(mov\s+.*,\s*0|xor\s+.*,\s*.*).*\n.*cmp.*\n.*j(l|g|le|ge|ne)/i,
+                description: 'Counter-based loop structure'
+            },
+            {
+                name: 'Buffer Overflow Vulnerability',
+                regex: /gets|strcpy|sprintf|strcat/i,
+                description: 'Dangerous function that may cause buffer overflow'
+            },
+            {
+                name: 'Stack Canary Check',
+                regex: /gs:\[0x14\]|__stack_chk_fail/i,
+                description: 'Stack protection mechanism'
+            },
+            {
+                name: 'System Call',
+                regex: /int\s+0x80|syscall/i,
+                description: 'Direct system call to kernel'
+            },
+            {
+                name: 'Register Zeroing',
+                regex: /xor\s+(\w+),\s*\1/i,
+                description: 'Efficient way to zero a register'
+            },
+            {
+                name: 'Arithmetic Operation',
+                regex: /(add|sub|mul|div|imul|idiv)\s+/i,
+                description: 'Mathematical calculation'
+            },
+            {
+                name: 'Memory Access',
+                regex: /\[e[a-z]+[+-]0x[0-9a-f]+\]/i,
+                description: 'Accessing memory at calculated address'
+            },
+            {
+                name: 'Conditional Branch',
+                regex: /j(ne|e|l|g|le|ge|z|nz|c|nc)\s+/i,
+                description: 'Code branching based on condition'
+            },
+            {
+                name: 'String Operation',
+                regex: /(movs|stos|lods|cmps|scas)(b|w|d)/i,
+                description: 'String manipulation instruction'
+            }
+        ];
+
+        function analyzeCode() {
+            const input = document.getElementById('assemblyInput').value.trim();
+            if (!input) {
+                alert('Please paste some assembly code first!');
+                return;
+            }
+
+            const lines = input.split('\n').filter(line => line.trim());
+            const output = document.getElementById('output');
+            const patternsGrid = document.getElementById('patternsGrid');
+            
+            let annotatedHTML = '';
+            let detectedPatterns = [];
+            let instructionCount = 0;
+            let complexity = 0;
+
+            lines.forEach((line, index) => {
+                const trimmedLine = line.trim();
+                if (!trimmedLine) return;
+
+                instructionCount++;
+                const instruction = trimmedLine.split(/\s+/)[0].toLowerCase();
+                const explanation = instructionExplanations[instruction] || 'Unknown instruction';
+                
+                // Calculate complexity
+                if (instruction.startsWith('j')) complexity += 2; // jumps add complexity
+                else if (['call', 'ret'].includes(instruction)) complexity += 3; // function calls
+                else complexity += 1; // basic instruction
+
+                let patternType = '';
+                let additionalInfo = '';
+
+                // Check for specific patterns
+                if (instruction === 'cmp') {
+                    patternType = 'COMPARISON';
+                    additionalInfo = 'This sets up flags for a conditional jump';
+                } else if (instruction.startsWith('j')) {
+                    patternType = 'CONTROL FLOW';
+                    additionalInfo = 'This changes program execution flow';
+                } else if (['push', 'pop'].includes(instruction)) {
+                    patternType = 'STACK OPERATION';
+                    additionalInfo = 'This manipulates the stack';
+                } else if (['call', 'ret'].includes(instruction)) {
+                    patternType = 'FUNCTION CONTROL';
+                    additionalInfo = 'This manages function execution';
+                } else if (instruction === 'mov') {
+                    patternType = 'DATA MOVEMENT';
+                    additionalInfo = 'This moves data between locations';
+                }
+
+                annotatedHTML += `
+                    <div class="annotation">
+                        <div class="assembly-line">${trimmedLine}</div>
+                        <div class="explanation">${explanation}</div>
+                        ${additionalInfo ? `<div style="color: #888; font-size: 12px;">${additionalInfo}</div>` : ''}
+                        ${patternType ? `<div class="pattern-type">[${patternType}]</div>` : ''}
+                    </div>
+                `;
+            });
+
+            // Detect larger patterns
+            patterns.forEach(pattern => {
+                if (pattern.regex.test(input)) {
+                    detectedPatterns.push(pattern);
+                }
+            });
+
+            // Special pattern detection
+            if (input.toLowerCase().includes('password') || input.toLowerCase().includes('auth')) {
+                detectedPatterns.push({
+                    name: 'Authentication Logic',
+                    description: 'Contains password or authentication related code'
+                });
+            }
+
+            if (input.match(/0x[0-9a-f]+/gi)) {
+                detectedPatterns.push({
+                    name: 'Hardcoded Values',
+                    description: 'Contains hardcoded hexadecimal values'
+                });
+            }
+
+            // Update output
+            output.innerHTML = annotatedHTML;
+
+            // Update patterns
+            if (detectedPatterns.length > 0) {
+                patternsGrid.innerHTML = detectedPatterns.map(pattern => `
+                    <div class="pattern-card">
+                        <div class="pattern-name">${pattern.name}</div>
+                        <div class="pattern-description">${pattern.description}</div>
+                    </div>
+                `).join('');
+            } else {
+                patternsGrid.innerHTML = '<div style="text-align: center; color: #666; grid-column: 1 / -1;">No specific patterns detected</div>';
+            }
+
+            // Update stats
+            document.getElementById('instructionCount').textContent = instructionCount;
+            document.getElementById('patternCount').textContent = detectedPatterns.length;
+            document.getElementById('complexityScore').textContent = complexity;
+        }
+
+        function clearAll() {
+            document.getElementById('assemblyInput').value = '';
+            document.getElementById('output').innerHTML = '<div style="text-align: center; color: #666; margin-top: 150px;">Paste assembly code and click "Analyze" to see explanations</div>';
+            document.getElementById('patternsGrid').innerHTML = '<div style="text-align: center; color: #666; grid-column: 1 / -1;">No patterns detected yet</div>';
+            document.getElementById('instructionCount').textContent = '0';
+            document.getElementById('patternCount').textContent = '0';
+            document.getElementById('complexityScore').textContent = '0';
+        }
+
+        function loadExample() {
+            const example = `push ebp
+mov ebp, esp
+sub esp, 0x20
+mov dword ptr [ebp-0x4], 0x1337
+mov eax, dword ptr [ebp-0x4]
+cmp eax, 0x1337
+jne loc_40103C
+push offset aAccessGranted
+call printf
+add esp, 0x4
+jmp loc_401048
+loc_40103C:
+push offset aAccessDenied
+call printf
+add esp, 0x4
+loc_401048:
+mov esp, ebp
+pop ebp
+ret`;
+            document.getElementById('assemblyInput').value = example;
+            analyzeCode();
+        }
+
+        // Auto-analyze on paste
+        document.getElementById('assemblyInput').addEventListener('paste', function() {
+            setTimeout(analyzeCode, 100);
+        });
+    </script>
+</body>
+</html>
